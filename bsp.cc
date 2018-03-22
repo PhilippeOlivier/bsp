@@ -1,3 +1,4 @@
+#include <chrono>
 #include <ilcp/cp.h>
 #include <iostream>
 
@@ -10,6 +11,7 @@ ILOSTLBEGIN
 
 void LoadData(IloEnv env,
 	      const char* filename,
+	      IloInt& max_stack_height,
 	      IloInt& num_boxes,
 	      IloIntArray heights,
 	      IloArray<IloIntArray> conflicts);
@@ -18,12 +20,15 @@ void LoadData(IloEnv env,
 int main(int argc, char **argv) {
     IloEnv env;
 
+    std::chrono::high_resolution_clock::time_point time_start =
+	std::chrono::high_resolution_clock::now();
+
     // Data
-    IloInt max_height = 100;
+    IloInt max_stack_height;
     IloInt num_boxes;
     IloIntArray heights = IloIntArray(env);
     IloArray<IloIntArray> conflicts = IloArray<IloIntArray>(env);
-    LoadData(env, argv[1], num_boxes, heights, conflicts);
+    LoadData(env, argv[1], max_stack_height, num_boxes, heights, conflicts);
 
     // Greedy first-fit solution
     IloArray<IloIntArray> greedy_stacks = IloArray<IloIntArray>(env);
@@ -38,7 +43,7 @@ int main(int argc, char **argv) {
 		    conflict = true;
 		}
 	    }
-	    if (height+heights[i] > max_height) {
+	    if (height+heights[i] > max_stack_height) {
 		conflict = true;
 	    }
 	    if (!conflict) {
@@ -53,11 +58,17 @@ int main(int argc, char **argv) {
 	    greedy_stacks.add(IloIntArray(env, 1, i));
 	}
     }
-    std::cout << "Greedy solution (first-fit): " << greedy_stacks.getSize() << std::endl;
 
-    // CP model: try an increasing number of stacks
-    std::cout << "Lower bound: " << ceil((float)IloSum(heights)/(float)max_height) << std::endl;
-    IloInt num_stacks = ceil((float)IloSum(heights)/(float)max_height);
+    std::cout << "Lower bound: "
+	      << ceil((float)IloSum(heights)/(float)max_stack_height)
+	      << std::endl;
+    
+    std::cout << "Greedy solution (first-fit): "
+	      << greedy_stacks.getSize()
+	      << std::endl;
+    
+    // CP model: Try an increasing number of stacks
+    IloInt num_stacks = ceil((float)IloSum(heights)/(float)max_stack_height);
     while (true) {
 	IloModel cp_model(env);
 	IloIntVarArray boxes(env, num_boxes, 0, num_stacks-1);
@@ -75,8 +86,9 @@ int main(int argc, char **argv) {
 	IloIntVarArray stack_heights = IloIntVarArray(env,
 						      num_stacks,
 						      0,
-						      max_height);
+						      max_stack_height);
 
+	// Constraint: Packing
 	cp_model.add(IloPack(env,
 			     stack_heights,
 			     boxes,
@@ -94,6 +106,14 @@ int main(int argc, char **argv) {
 	}
     }
     std::cout << "Optimal solution: " << num_stacks << std::endl;
+
+    std::chrono::high_resolution_clock::time_point time_end =
+	std::chrono::high_resolution_clock::now();
+
+    std::cout << "Time elapsed: "
+	      << std::chrono::duration_cast<std::chrono::milliseconds>(time_end-time_start).count()/1000.0
+	      << "s"
+	      << std::endl;
     
     env.end();
     return 0;
@@ -102,12 +122,15 @@ int main(int argc, char **argv) {
 
 void LoadData(IloEnv env,
 	      const char* filename,
+	      IloInt& max_stack_height,
 	      IloInt& num_boxes,
 	      IloIntArray heights,
 	      IloArray<IloIntArray> conflicts) {
     ifstream f(filename, ios::in);
-    int h, l, w;
 
+    f >> max_stack_height;
+    
+    int h, l, w;
     IloArray<IloIntArray> boxes = IloArray<IloIntArray>(env);
     while (f >> h >> l >> w) {
 	boxes.add(IloIntArray(env, 2, l, w));
@@ -119,8 +142,10 @@ void LoadData(IloEnv env,
     for (int i=0; i<boxes.getSize(); i++) {
 	conflicts.add(IloIntArray(env, boxes.getSize()));
 	for (int j=0; j<boxes.getSize(); j++) {
-	    if (!(((boxes[i][0] < boxes[j][0]) && (boxes[i][1] < boxes[j][1])) ||
-		  ((boxes[j][0] < boxes[i][0]) && (boxes[j][1] < boxes[i][1])))) {
+	    if (!(((boxes[i][0] < boxes[j][0]) &&
+		   (boxes[i][1] < boxes[j][1])) ||
+		  ((boxes[j][0] < boxes[i][0]) &&
+		   (boxes[j][1] < boxes[i][1])))) {
 		conflicts[i][j] = 1;
 	    }
 	    else {

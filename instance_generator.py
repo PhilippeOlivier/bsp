@@ -3,70 +3,40 @@ import random
 import sys
 
 
-#################################### NOTES #####################################
+################################################################################
 
-# Argument 1: n
-# Argument 2: k
-# Argument 3: instance #
+# Argument 1 [integer]: number of boxes
+# Argument 2 [integer]: maximum box height
+# Argument 3 [integer]: maximum stack height
+
 # Example:
-# > python3 generator.py 200 5 1
+# > python3 generator.py 200 30 100
 
-# Each box is represented by a tuple (h, l, w), with l <= w. Boxes may *NOT* be
-# rotated in any direction.
-
-################################## PARAMETERS ##################################
-
-# Boxes have an average height of 10 (independent of k).
-k_3_box_heights = [3, 10, 17]
-k_5_box_heights = [7, 13]
-k_10_box_heights = [1, 2, 5, 19, 23]
-
-# The maximum height of the stack is chosen so that stacks average 10 boxes
-# each. Boxes have an average height of 10 so the stack height is maxed at 100.
-max_height = 100
-
-# The conflict parameter has a range of [0, 1]. Pairwise conflict probabilities:
-# < 0.6: Below ~5%
-# 0.7: ~12%
-# 0.8: ~25%
-# > 0.9: ~33%
-conflict_parameter = 0.9
+# Each box is represented by a tuple (h, l, w), with l <= w.
 
 ################################################################################
 
 
-n = int(sys.argv[1])
-num_k = int(sys.argv[2])
-instance = sys.argv[3]
+num_boxes = int(sys.argv[1])
+max_box_height = int(sys.argv[2])
+max_stack_height = int(sys.argv[3])
 
-# Arguments
+# Sanity check
 if (len(sys.argv) != 4):
     exit("ERROR: Wrong number of arguments.")
-
-# Number of boxes
-if (n not in [20, 50, 100, 200, 500, 1000]):
-    exit("ERROR: Value n is not valid.")
-
-# Number of unique heights
-if (num_k not in [3, 5, 10]):
-    exit("ERROR: Value k is not valid.")
-
-# Unique heights
-k = k_3_box_heights
-if (num_k > 3):
-    k += k_5_box_heights
-if (num_k > 5):
-    k += k_10_box_heights
-k.sort()
+if (num_boxes < 0 or \
+    max_box_height < 0 or \
+    max_stack_height < 0):
+    exit("ERROR: All arguments must be nonnegative.")
+if (max_box_height > max_stack_height):
+    exit("ERROR: Arguments max_box_height and max_stack_height are not valid.")
 
 # Generate boxes
 boxes = []
-for i in range(n):
-    boxes.append([random.choice(k),
-                   random.randint(math.floor(math.log(i+1))*(i+1),
-                                  math.floor(math.log(i+1))*(i+1)+int(100000**conflict_parameter)),
-                   random.randint(math.floor(math.log(i+1))*(i+1),
-                                  math.floor(math.log(i+1))*(i+1)+int(100000**conflict_parameter))])
+for i in range(num_boxes):
+    boxes.append([random.randint(1, max_box_height), \
+                  random.randint(1, max_box_height), \
+                  random.randint(1, max_box_height)])
     if (boxes[i][1] > boxes[i][2]):
         boxes[i][1], boxes[i][2] = boxes[i][2], boxes[i][1]
 
@@ -81,9 +51,13 @@ for i in range(len(boxes)):
         num_combinations += 1
 
 # Output
-with open(str(n)+"_"+str(num_k)+"_"+instance+".txt", "w") as f:
+with open(str(num_boxes)+"_"+ \
+          str(max_box_height)+"_"+ \
+          str(max_stack_height)+".txt", "w") as f:
+    f.write(str(max_stack_height)+"\n")
     for b in boxes:
         f.write(str(b[0])+" "+str(b[1])+" "+str(b[2])+"\n")
-print("n=", n, ", k=", num_k, ", #", instance, ", ",
-      round(float(num_conflicts)/float(num_combinations)*100, 2),
-      "% pairwise conflicts", sep='')
+print(num_boxes, " boxes (max. height ", max_box_height, \
+      ") with ", round(float(num_conflicts)/float(num_combinations)*100, 2),
+      "% pairwise conflicts. Maximum stack height of ", max_stack_height, \
+      ".", sep='')
