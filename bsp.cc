@@ -3,9 +3,6 @@
 #include <iostream>
 
 
-#define RC_EPS 1.0e-6
-
-
 ILOSTLBEGIN
 
 
@@ -23,7 +20,7 @@ int main(int argc, char **argv) {
     std::chrono::high_resolution_clock::time_point time_start =
 	std::chrono::high_resolution_clock::now();
 
-    // Data
+    // Load data
     IloInt max_stack_height;
     IloInt num_boxes;
     IloIntArray heights = IloIntArray(env);

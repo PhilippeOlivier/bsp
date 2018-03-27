@@ -29,7 +29,7 @@ if (num_boxes < 0 or \
     max_stack_height < 0):
     exit("ERROR: All arguments must be nonnegative.")
 if (max_box_height > max_stack_height):
-    exit("ERROR: Arguments max_box_height and max_stack_height are not valid.")
+    exit("ERROR: Argument max_box_height must be lower or equal to max_stack_height.")
 
 # Generate boxes
 boxes = []
