@@ -8,7 +8,6 @@ ILOSTLBEGIN
 
 void LoadData(IloEnv env,
 	      const char* filename,
-	      IloInt& max_stack_height,
 	      IloInt& num_boxes,
 	      IloIntArray heights,
 	      IloArray<IloIntArray> conflicts);
@@ -21,11 +20,10 @@ int main(int argc, char **argv) {
 	std::chrono::high_resolution_clock::now();
 
     // Load data
-    IloInt max_stack_height;
     IloInt num_boxes;
     IloIntArray heights = IloIntArray(env);
     IloArray<IloIntArray> conflicts = IloArray<IloIntArray>(env);
-    LoadData(env, argv[1], max_stack_height, num_boxes, heights, conflicts);
+    LoadData(env, argv[1], num_boxes, heights, conflicts);
 
     // Greedy first-fit solution
     IloArray<IloIntArray> greedy_stacks = IloArray<IloIntArray>(env);
@@ -40,9 +38,6 @@ int main(int argc, char **argv) {
 		    conflict = true;
 		}
 	    }
-	    if (height+heights[i] > max_stack_height) {
-		conflict = true;
-	    }
 	    if (!conflict) {
 		greedy_stacks[j].add(i);
 		packed = true;
@@ -55,54 +50,47 @@ int main(int argc, char **argv) {
 	    greedy_stacks.add(IloIntArray(env, 1, i));
 	}
     }
-
-    std::cout << "Lower bound: "
-	      << ceil((float)IloSum(heights)/(float)max_stack_height)
-	      << std::endl;
     
     std::cout << "Greedy solution (first-fit): "
 	      << greedy_stacks.getSize()
 	      << std::endl;
-    
-    // CP model: Try an increasing number of stacks
-    IloInt num_stacks = ceil((float)IloSum(heights)/(float)max_stack_height);
-    while (true) {
-	IloModel cp_model(env);
-	IloIntVarArray boxes(env, num_boxes, 0, num_stacks-1);
 
-	// Constraints: Conflicting boxes are in separate stacks
-	for (int i=0; i<num_boxes-1; i++) {
-	    for (int j=i+1; j<num_boxes; j++) {
-		if (conflicts[i][j] == 1) {
-		    cp_model.add(boxes[i] != boxes[j]);
-		}
+    // CP model
+    IloModel cp_model(env);
+    IloIntVarArray boxes(env, num_boxes, 0, greedy_stacks.getSize()-1);
+
+    // Constraints: Conflicting boxes are in separate stacks
+    for (int i=0; i<num_boxes-1; i++) {
+	for (int j=i+1; j<num_boxes; j++) {
+	    if (conflicts[i][j] == 1) {
+		cp_model.add(boxes[i] != boxes[j]);
 	    }
 	}
-
-	// Constraints: Stacks have a maximum height
-	IloIntVarArray stack_heights = IloIntVarArray(env,
-						      num_stacks,
-						      0,
-						      max_stack_height);
-
-	// Constraint: Packing
-	cp_model.add(IloPack(env,
-			     stack_heights,
-			     boxes,
-			     heights,
-			     IloIntExpr(env, num_stacks)));
-
-	IloCP cp_solver(cp_model);
-	cp_solver.setOut(env.getNullStream()); // Supress Cplex output
-
-	if (!cp_solver.solve()) {
-	    num_stacks++;
-	}
-	else {
-	    break;
-	}
     }
-    std::cout << "Optimal solution: " << num_stacks << std::endl;
+
+    // Constraint: Bin packing
+    IloIntVarArray loads = IloIntVarArray(env,
+    					  greedy_stacks.getSize(),
+    					  0,
+    					  IloIntMax);
+    cp_model.add(IloPack(env,
+    			 loads,
+    			 boxes,
+    			 heights));
+
+    // Symmetry breaking
+    for (int i=0; i<greedy_stacks.getSize()-1; i++) {
+    	cp_model.add(loads[i] >= loads[i+1]);
+    }
+    
+    // Objective: Minimize the number of stacks
+    cp_model.add(IloMinimize(env, IloMax(boxes)));
+    
+    IloCP cp_solver(cp_model);
+    cp_solver.setOut(env.getNullStream()); // Supress Cplex output
+    cp_solver.solve();
+
+    std::cout << "Optimal solution: " << cp_solver.getValue(IloMax(boxes)) << std::endl;
 
     std::chrono::high_resolution_clock::time_point time_end =
 	std::chrono::high_resolution_clock::now();
@@ -119,23 +107,33 @@ int main(int argc, char **argv) {
 
 void LoadData(IloEnv env,
 	      const char* filename,
-	      IloInt& max_stack_height,
 	      IloInt& num_boxes,
 	      IloIntArray heights,
 	      IloArray<IloIntArray> conflicts) {
+    // Unrotated boxes
     ifstream f(filename, ios::in);
-
-    f >> max_stack_height;
-    
-    int h, l, w;
+    int l, w, h;
     IloArray<IloIntArray> boxes = IloArray<IloIntArray>(env);
-    while (f >> h >> l >> w) {
+    while (f >> l >> w >> h) {
 	boxes.add(IloIntArray(env, 2, l, w));
 	heights.add(h);
     }
 
+    // Rotate boxes in every direction such that l <= w
+    int num_unrotated_boxes = heights.getSize();
+    for (int i=0; i<num_unrotated_boxes; i++) {
+	l = boxes[i][0];
+	w = boxes[i][1];
+	h = heights[i];
+	boxes.add(IloIntArray(env, 2, min(l, h), max(l, h)));
+	heights.add(w);
+	boxes.add(IloIntArray(env, 2, min(w, h), max(w, h)));
+	heights.add(l);
+    }
+
     num_boxes = heights.getSize();
 
+    // Compute conflict matrix
     for (int i=0; i<boxes.getSize(); i++) {
 	conflicts.add(IloIntArray(env, boxes.getSize()));
 	for (int j=0; j<boxes.getSize(); j++) {
