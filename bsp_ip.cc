@@ -1,5 +1,5 @@
 /*
- * Argument 1 [string]: File name of instance
+ * Argument 1 [string]: Path of instance
  *
  * Example
  * ./bsp_ip 50_100

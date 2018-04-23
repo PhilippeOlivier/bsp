@@ -1,27 +1,25 @@
+################################################################################
+#
+# Argument 1 [integer]: Number of boxes
+# Argument 2 [integer]: Maximum box dimension
+#
+# Example:
+# python3 instance_generator.py 50 100
+#
+# Each box is represented by a tuple of three dimensions.
+#
+################################################################################
+
+
 import math
 import random
 import sys
-
-
-################################################################################
-
-# Argument 1 [integer]: number of boxes
-# Argument 2 [integer]: maximum box dimension
-
-# Example:
-# python3 instance_generator.py 50 100
-
-# Each box is represented by a tuple of three dimensions.
-
-################################################################################
 
 
 num_boxes = int(sys.argv[1])
 max_box_dimension = int(sys.argv[2])
 
 # Sanity check
-if (len(sys.argv) != 3):
-    exit("ERROR: Wrong number of arguments.")
 if (num_boxes < 0 or max_box_dimension < 0):
     exit("ERROR: All arguments must be nonnegative.")
 
