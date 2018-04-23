@@ -9,9 +9,9 @@ import sys
 # Argument 2 [integer]: maximum box dimension
 
 # Example:
-# > python3 generator.py 1000 100
+# python3 instance_generator.py 50 100
 
-# Each box is represented by a tuple (l, w, h).
+# Each box is represented by a tuple of three dimensions.
 
 ################################################################################
 

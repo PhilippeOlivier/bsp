@@ -22,7 +22,7 @@ CPOPTINCDIR   = $(CPOPTDIR)/include
 CCFLAGS = $(CCOPT) -I$(CPLEXINCDIR) -I$(CONCERTINCDIR) -I$(CPOPTINCDIR)
 
 all:
-	$(CCC) bsp.cc $(CCFLAGS) $(CCLNDIRS) -o bsp $(CCLNFLAGS)
+	$(CCC) bsp_ip.cc $(CCFLAGS) $(CCLNDIRS) -o bsp_ip $(CCLNFLAGS)
 
 clean:
-	rm *.o bsp
+	rm *.o bsp_ip
