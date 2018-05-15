@@ -15,7 +15,7 @@
 #
 #   (2) Clique generation. A promising node to add to a clique has both a large
 #   number of neighbors (it is more likely that this new clique could be
-#   increased further) and a high height (a higher clique is better). Therefore,
+#   increased further) and a tall height (a taller clique is better). Therefore,
 #   each node has a score equal to the number of its neighbors times its height.
 #   We use roulette wheel selection to choose the starting node of a clique and
 #   to incrementally add nodes to this clique until it is not possible anymore
